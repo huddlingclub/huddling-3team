@@ -11,27 +11,30 @@
 | 소유자 | GitHub 브랜치와 파일 | 합의할 인터페이스 |
 |---|---|---|
 | A | feat/mac-shell · desktop/, 루트 package.json 및 lockfile | preload에서 window.gifHost.copyGif({id, gifUrl, sessionId})를 제공한다. 성공·실패를 반환하고 메인 프로세스가 성공한 세션만 닫는다 |
-| B | feat/picker · src/, public/fixtures/ | GifItem은 id, description, previewUrl, gifUrl을 가진다. gifHost가 없으면 웹 미리보기 동작을 사용한다 |
+| B | feat/picker · src/, public/fixtures/, public/fonts/ | GifItem은 id, description, previewUrl, gifUrl을 가진다. gifHost가 없으면 웹 미리보기 동작을 사용한다 |
 | PM | 통합 브랜치 · supabase/, 세 문서 | 추천어 테이블과 샘플 데이터, Vercel Preview URL, 실측 결과를 PR에 기록한다 |
 
 A가 첫 커밋에서 다음 npm 스크립트를 정의한다. npm run dev는 Vite, npm run desktop은 준비된 로컬 Vite 주소를 여는 Electron, npm run build는 타입 검사와 Vite 빌드다. 의존성 추가는 A가 lockfile에 반영한다. 첫 설치로 lockfile을 커밋한 후 팀원은 npm ci를 실행한다. Mac 시연 시 터미널 두 개에서 dev와 desktop을 순서대로 실행한다. Vercel은 저장소 루트에서 npm run build, 출력 dist로 설정한다. 로컬 Electron에는 로컬 UI만 로드하고 contextIsolation을 켜며 nodeIntegration을 끈다. 복사 요청은 현재 세션에서 받은 GIF 또는 내장 fixture만 허용한다.
 
 ### 패널 창 구성 (A · desktop/)
 
-DESIGN.md의 리퀴드 글래스·Spotlight 스타일을 위해 BrowserWindow를 아래 기준으로 만든다. 창 크기는 DESIGN.md의 패널 크기(560 × 520)와 같다.
+DESIGN.md의 glitch·픽셀 아트 레트로 창 스타일을 위해 BrowserWindow를 아래 기준으로 만든다. 창 크기는 DESIGN.md의 패널 크기(560 × 520)와 같다.
 
 | 항목 | 값 | 이유 |
 |---|---|---|
-| 테두리·배경 | `frame: false`, `transparent: true`, `backgroundColor: '#00000000'` | 제목 막대 없이 패널만 보이게 |
-| 유리 질감 | `vibrancy: 'popover'`(대안 `'hud'`), `visualEffectState: 'active'` | 뒤 화면을 흐리게 비치게 하는 macOS 네이티브 효과. 포커스를 잃어도 유지 |
+| 테두리·배경 | `frame: false`, `transparent: true`, `backgroundColor: '#00000000'` | 제목 막대는 웹 UI가 직접 그린다. 계단 모양 모서리 바깥을 투명하게 비우기 위해 투명 창을 쓴다 |
+| 그림자 | `hasShadow: false` | 흐린 그림자를 쓰지 않는 스타일. 패널 테두리 2가 경계를 만든다 |
 | 창 종류 | `type: 'panel'`, `alwaysOnTop: true`, `setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })` | Spotlight처럼 전체 화면 앱 위에도 뜨게 |
-| 그 밖 | `resizable: false`, `fullscreenable: false`, `skipTaskbar: true`, `hasShadow: true`, `show: false` 후 준비되면 표시 | 시스템 그림자 사용(CSS 그림자는 창 밖으로 그려지지 않음) |
-| 외관 | `nativeTheme`으로 라이트·다크와 ‘투명도 줄이기’를 읽어 렌더러에 전달 | DESIGN.md의 토큰과 불투명 대체 적용 |
+| 그 밖 | `resizable: false`, `fullscreenable: false`, `skipTaskbar: true`, `show: false` 후 준비되면 표시 | 고정 크기 패널 |
+| 화면 배율 | 창 위치·크기는 정수로 계산 | 픽셀 서체와 아이콘이 번지지 않게 |
 
-**먼저 확인할 것**　네이티브 vibrancy 창은 CSS `border-radius: 28`로 모서리가 잘리지 않을 수 있다. 첫 실행에서 모서리 모양을 확인하고 결과를 PR에 적는다.
-- 모서리가 맞으면 그대로 쓴다.
-- 맞지 않으면 vibrancy를 끄고 투명 창 + CSS 모서리 28 + 조금 더 진한 `--glass-fill`(라이트 rgba(250,250,252,0.85))로 바꾼다. 이 경우 뒤 화면이 흐리게 비치지는 않지만 패널 모양과 레이아웃은 DESIGN.md와 같다.
-- 어떤 경우든 레이아웃·서체·여백은 바꾸지 않는다.
+유리 효과(`vibrancy`)와 라이트·다크 외관 전환은 쓰지 않는다. ‘동작 줄이기’는 렌더러의 `prefers-reduced-motion`으로 처리한다.
+
+**먼저 확인할 것**　투명 창에서 패널 바깥(계단 모서리)이 실제로 비어 보이는지, 클릭이 뒤 앱으로 빠지지 않는지 확인한다. 문제가 있으면 계단 모서리를 빼고 직사각형 패널로 시연한다. 레이아웃·서체·색은 바꾸지 않는다.
+
+### 픽셀 서체 준비 (B · public/fonts/)
+
+DESIGN.md의 Galmuri11, Galmuri11 Bold, Galmuri14(SIL OFL)를 woff2로 `public/fonts/`에 넣고 라이선스 파일(`OFL.txt`)도 함께 커밋한다. CDN에서 불러오지 않는다(오프라인 시연 대비). 넣기 전에 배포처의 라이선스 문구를 직접 확인하고 PR에 출처 URL을 적는다. 서체를 못 불러오면 DESIGN.md의 대체 서체로 보이므로, 검수 때 대체 서체로 보이는지 꼭 확인한다.
 
 ### 코딩 에이전트(Claude Code · Codex)에 바로 전달할 작업 지시
 
@@ -95,8 +98,8 @@ KLIPY Partner Panel에서 테스트 키를 받아 공식 GIF 검색 예제로 �
 | T3 | 마우스로 결과 클릭 한 번, 이어 키보드만으로 다음 결과 선택 | 클릭 즉시 1건 복사(확인 단계 없음), 화살표로 이동 후 Enter로 1건 복사, 기존 초안 유지 |
 | T4 | 숫자 GIF를 시연 채팅에서 붙여넣고 전송 | 수신 시 숫자 변경 확인. 파일 첨부면 채팅 내/파일 열기 후 재생도 구분 |
 | T5 | 기존 클립보드에 ‘검증’ 저장 후 다운로드 중단 또는 취소 | 복사 완료로 표시하지 않고 기존 내용 유지, 재시도 가능 |
-| T6 | 빈 응답·오프라인·인증 오류·요청 한도 오류를 sample로 재현 | 빈 결과와 오류를 구분, 반복 호출 없음, 오류 해소 후 재시도 가능 |
+| T6 | 빈 응답·오프라인·인증 오류·요청 한도 오류를 sample로 재현 | 빈 결과는 404, 오프라인·인증·한도는 ERR·401·429 화면으로 구분, 반복 호출 없음, 오류 해소 후 재시도 가능 |
 | T7 | 단축키 중복, 보조 모니터, 전체 화면 앱에서 각각 호출 | 등록 실패는 메뉴에서 안내, 메뉴로 열기 가능. 패널 위치와 앱 복귀 결과 기록 |
-| T8 | 밝은 배경·어두운 배경 앱 위에서 라이트·다크 외관, ‘투명도 줄이기’로 각각 호출 | DESIGN.md 레이아웃 값(패널 560 × 520, 여백 16, 카드 260·간격 8)과 시스템 서체 확인. 모든 경우 글자가 읽히고, 유리 효과 방식(vibrancy 또는 불투명 대체)을 기록 |
+| T8 | 밝은 앱·어두운 앱 위에서 호출, 없는 검색어로 404 표시, 시스템 ‘동작 줄이기’ 켜고 다시 호출 | DESIGN.md 레이아웃 값(패널 560 × 520, 제목 막대 28, 여백 12, 카드 262·간격 8) 확인. 제목·404·버튼이 픽셀 서체로 선명하고(대체 서체 아님), 계단 모서리 바깥이 비어 보이며, 동작 줄이기에서 글리치가 멈춘다 |
 
 **실측 기록 양식**　날짜 / macOS·대상 앱 버전 / sample 또는 live / 호출 앱·입력란 / 복사 형식 / 붙여넣기 결과 / 수신 측 재생 / 통과·보류 / 담당. 현재 전 항목 미측정이다. Vercel Preview URL과 Git 커밋, Supabase 추천어 변경 반영 여부도 함께 남긴다. 시연 전 PM이 T1~T6, T8 결과를 채우고 T7의 제약을 발표자에게 공유한다.

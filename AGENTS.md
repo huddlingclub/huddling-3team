@@ -21,7 +21,7 @@ Mac에서 ⌥ Space로 GIF 검색 패널을 열고, 고른 애니메이션 GIF�
 | 소유자 | 브랜치 | 수정 가능한 경로 |
 |---|---|---|
 | A · Mac 셸 | `feat/mac-shell` | `desktop/`, 루트 `package.json`, lockfile |
-| B · 검색 UI | `feat/picker` | `src/`, `public/fixtures/` |
+| B · 검색 UI | `feat/picker` | `src/`, `public/fixtures/`, `public/fonts/` |
 | PM · 통합 | 통합 브랜치 | `supabase/`, `PRD.md`, `HARNESS.md`, `DESIGN.md` |
 
 - 자기 소유가 아닌 경로는 수정하지 않는다. 꼭 필요하면 PR 설명에 이유를 적고 소유자에게 확인받는다.
@@ -66,6 +66,7 @@ A가 첫 커밋에서 정의한다. 정의 전에는 아래 명령이 없을 수
 ## 작업 규칙
 
 - UI 문구는 `DESIGN.md`의 한국어 문구를 그대로 쓴다.
+- 화면 스타일(glitch·픽셀 아트, 색 토큰, 픽셀 서체 크기, 404·오류 화면)은 `DESIGN.md`의 값을 그대로 쓴다. 둥근 모서리, 흐린 그림자, 유리 효과를 임의로 넣지 않는다. 픽셀 서체는 CDN이 아니라 `public/fonts/`에서 불러온다.
 - 한글 조합(IME) 중 Enter와 이전 검색 응답 덮어쓰기는 `HARNESS.md` T2 기준으로 직접 재현해 확인한다.
 - 에이전트가 실행한 테스트 결과와 실제 Mac에서 사람이 관찰한 결과는 PR에 **따로** 적는다. 실기기에서 확인하지 않은 항목을 통과로 쓰지 않는다.
 - 커밋 메시지는 한국어로 짧게 쓴다. 에이전트가 붙이는 공동 작성자 줄은 그대로 둬도 된다.
