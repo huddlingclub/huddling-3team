@@ -34,15 +34,15 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>Gifkey</string>
 <key>CFBundleDisplayName</key><string>짤깍</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>3</string>
-<key>CFBundleShortVersionString</key><string>0.1.1</string>
+<key>CFBundleVersion</key><string>4</string>
+<key>CFBundleShortVersionString</key><string>0.2.0</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
 for arch in arm64 x86_64; do
-  swiftc -O -target "$arch-apple-macosx13.0" -module-cache-path "$stage/cache-$arch" desktop/mac-launcher.swift -o "$stage/Gifkey-$arch"
+  swiftc -O -target "$arch-apple-macosx13.0" -module-cache-path "$stage/cache-$arch" desktop/mac-launcher.swift desktop/web-copy-bridge.swift -o "$stage/Gifkey-$arch"
 done
 lipo -create "$stage/Gifkey-arm64" "$stage/Gifkey-x86_64" -output "$app/Contents/MacOS/Gifkey"
 xattr -cr "$app"
@@ -50,11 +50,16 @@ codesign --force --sign - "$app"
 cat > "$stage/share/사용 안내.txt" <<'GUIDE'
 짤깍 · 맥 팀 테스트용
 
-1. 압축을 풀고 Gifkey.app을 더블클릭합니다. macOS 13 이상이 필요합니다.
-2. ‘ㅋㅋ 웃김’이나 ‘감사’를 검색하고 GIF를 클릭합니다.
-3. 창이 닫히면 맥 카카오톡에서 ⌘V로 붙여넣습니다. 상대 화면에서 움직이는지도 확인합니다.
-4. ⌥ Space 또는 메뉴 막대의 번개 아이콘에서 다시 엽니다.
-5. 웹 짤깍에서는 GIF를 선택하고 ‘맥 앱으로 GIF 보내기’를 누른 뒤 메뉴 막대의 ‘웹에서 고른 GIF 복사’를 선택합니다.
+1. 이전 짤깍이 켜져 있다면 메뉴 막대에서 ‘짤깍 종료’를 선택합니다.
+2. 압축을 풀고 새 Gifkey.app을 한 번 실행합니다. macOS 13 이상이 필요합니다.
+3. 앱은 창 없이 메뉴 막대에 상주합니다. https://huddling-3team.vercel.app 을 엽니다.
+4. 웹에서 GIF를 클릭합니다. 브라우저가 로컬 네트워크 연결 권한을 물으면 허용합니다.
+5. 웹에 ‘GIF를 복사했어요’가 뜨면 카카오톡에서 ⌘V로 붙여넣습니다. 전송은 직접 하세요.
+6. 다음 GIF부터는 웹에서 클릭하고 카톡에 ⌘V만 누릅니다. 앱 창을 열 필요가 없습니다.
+7. 오프라인 샘플 검색창은 ⌥ Space 또는 메뉴 막대의 ‘짤깍 열기’로 엽니다.
+
+앱을 종료하거나 Mac을 재시작하면 새 Gifkey.app을 다시 한 번 실행해야 합니다.
+원본 GIF 파일이 복사됩니다. 카카오톡 입력창과 수신 화면에서의 재생 여부는 직접 확인해 주세요.
 
 샘플 검색과 키워드 추천은 오프라인에서 동작합니다.
 개발자 확인 경고가 뜨면 팀에서 받은 파일임을 확인한 뒤 시스템 설정 → 개인정보 보호 및 보안 → 그래도 열기를 선택하세요.

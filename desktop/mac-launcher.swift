@@ -40,7 +40,7 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
     private var ready = false
     private var isOpen = false
     private var sessionID = 0
-    private var transferFolder: URL?
+    private let webCopyBridge = WebCopyBridge()
 
     private let bridge = """
     (() => {
@@ -59,8 +59,7 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
         ready: () => send('ready'),
         close: () => send('close'),
         copyGif: request => send('copy', request),
-        dragGif: request => send('drag', request),
-        copyWebGif: () => send('copyWeb')
+        dragGif: request => send('drag', request)
       };
     })();
     """
@@ -88,8 +87,8 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
         let menu = NSMenu()
         let openItem = menu.addItem(withTitle: "짤깍 열기", action: #selector(showPicker), keyEquivalent: "")
         openItem.target = self
-        let copyLink = menu.addItem(withTitle: "웹에서 고른 GIF 복사", action: #selector(copyWebGifFromMenu), keyEquivalent: "")
-        copyLink.target = self
+        let webItem = menu.addItem(withTitle: "웹 짤깍 열기 · GIF 클릭 후 ⌘V", action: #selector(openWebsite), keyEquivalent: "")
+        webItem.target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "짤깍 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menuItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -108,6 +107,14 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
         mainMenu.setSubmenu(edit, for: editMenuItem)
         NSApp.mainMenu = mainMenu
 
+        webCopyBridge.start { [weak self] in
+            self?.menuItem?.button?.toolTip = "웹 연결 실패 · 실행 중인 이전 짤깍 앱을 종료하고 다시 실행하세요."
+            let alert = NSAlert()
+            alert.messageText = "웹 연결을 시작하지 못했어요."
+            alert.informativeText = "메뉴 막대에서 이전 짤깍 앱을 종료한 뒤 새 앱을 다시 실행해 주세요."
+            alert.runModal()
+        }
+        menuItem?.button?.toolTip = "짤깍 웹 연결 · 웹에서 GIF 클릭 후 카톡에 ⌘V"
         registerShortcut()
         webView.loadFileURL(page, allowingReadAccessTo: page.deletingLastPathComponent())
     }
@@ -163,35 +170,8 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
         previousApp = nil
     }
 
-    @objc private func copyWebGifFromMenu() {
-        if copyWebGif() { hidePicker() }
-    }
-
-    private func copyWebGif() -> Bool {
-        let prefix = "JJALKKAK-GIF:"
-        do {
-            guard let payload = NSPasteboard.general.string(forType: .string),
-                  payload.hasPrefix(prefix), payload.utf8.count <= 32 * 1024 * 1024 + prefix.count,
-                  let data = Data(base64Encoded: String(payload.dropFirst(prefix.count))),
-                  ["GIF87a", "GIF89a"].contains(String(decoding: data.prefix(6), as: UTF8.self)),
-                  let image = CGImageSourceCreateWithData(data as CFData, nil),
-                  CGImageSourceGetCount(image) > 0 else { throw CocoaError(.fileReadCorruptFile) }
-
-            let folder = transferFolder ?? FileManager.default.temporaryDirectory.appendingPathComponent("jjalkkak-" + UUID().uuidString)
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            transferFolder = folder
-            let file = folder.appendingPathComponent(UUID().uuidString).appendingPathExtension("gif")
-            try data.write(to: file, options: .atomic)
-            guard copyFile(file) else { throw CocoaError(.fileWriteUnknown) }
-            return true
-        } catch {
-            let alert = NSAlert()
-            alert.messageText = "GIF를 복사하지 못했어요."
-            alert.informativeText = "웹 짤깍에서 GIF를 선택하고 ‘맥 앱으로 GIF 보내기’를 다시 눌러 주세요."
-            NSApp.activate(ignoringOtherApps: true)
-            alert.runModal()
-            return false
-        }
+    @objc private func openWebsite() {
+        NSWorkspace.shared.open(URL(string: "https://huddling-3team.vercel.app")!)
     }
 
     private func copyFile(_ file: URL) -> Bool {
@@ -209,17 +189,12 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
         }
         if action == "ready" {
             ready = true
-            showPicker()
             replyHandler(true, nil)
             return
         }
         if action == "close" {
             hidePicker()
             replyHandler(true, nil)
-            return
-        }
-        if action == "copyWeb" {
-            replyHandler(copyWebGif(), nil)
             return
         }
 
@@ -244,8 +219,13 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
     }
 }
 
-let app = NSApplication.shared
-private let delegate = GifkeyApp()
-app.delegate = delegate
-app.setActivationPolicy(.accessory)
-withExtendedLifetime(delegate) { app.run() }
+@main
+private struct JjalkkakMain {
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = GifkeyApp()
+        app.delegate = delegate
+        app.setActivationPolicy(.accessory)
+        withExtendedLifetime(delegate) { app.run() }
+    }
+}
