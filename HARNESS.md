@@ -16,11 +16,13 @@
 
 A가 첫 커밋에서 다음 npm 스크립트를 정의한다. npm run dev는 Vite, npm run desktop은 준비된 로컬 Vite 주소를 여는 Electron, npm run build는 타입 검사와 Vite 빌드다. 의존성 추가는 A가 lockfile에 반영한다. 첫 설치로 lockfile을 커밋한 후 팀원은 npm ci를 실행한다. Mac 시연 시 터미널 두 개에서 dev와 desktop을 순서대로 실행한다. Vercel은 저장소 루트에서 npm run build, 출력 dist로 설정한다. 로컬 Electron에는 로컬 UI만 로드하고 contextIsolation을 켜며 nodeIntegration을 끈다. 복사 요청은 현재 세션에서 받은 GIF 또는 내장 fixture만 허용한다.
 
-### Claude Code에 바로 전달할 작업 지시
+### 코딩 에이전트(Claude Code · Codex)에 바로 전달할 작업 지시
+
+두 도구 모두 저장소 루트의 `AGENTS.md`를 공통 규칙으로 읽는다(Claude Code는 `CLAUDE.md`가 불러옴). 아래 지시는 어느 도구에 그대로 붙여 넣어도 된다.
 
 - **A**　“PRD.md, HARNESS.md, DESIGN.md를 읽고 desktop과 실행 스크립트를 구현해. 준비 완료 후 Alt+Space를 등록하고 성공 여부를 확인해. 패널을 숨긴 뒤 원래 앱의 입력란에 ⌘V가 들어가는지 실기기에서 확인할 절차를 PR에 적어. 원본 GIF 바이트로 먼저 검증하고 정지 이미지 변환을 피하는 경로를 사용해.”
 - **B**　“세 문서의 GifItem과 gifHost 계약을 따라 src와 fixture를 구현해. 한글 조합 중 Enter 오선택과 이전 검색 응답 덮어쓰기를 재현해 확인해. 브라우저에서는 데스크톱 복사 성공처럼 보이지 않게 해. PR에 sample/live 결과와 빌드 결과를 적어.”
-- 각 개발자는 별도 체크아웃 또는 worktree에서 Claude Code를 실행한다. 65분에 각자 변경 파일과 검증 결과를 첨부해 PR을 열고 PM이 동일 커밋으로 통합한다. AI가 작성한 테스트 결과와 실제 Mac 관찰 결과는 따로 기록한다.
+- 각 개발자는 별도 체크아웃 또는 worktree에서 Claude Code나 Codex를 실행한다. 한 작업 폴더에서 두 도구를 동시에 실행하지 않는다. 65분에 각자 변경 파일과 검증 결과를 첨부해 PR을 열고 PM이 동일 커밋으로 통합한다. AI가 작성한 테스트 결과와 실제 Mac 관찰 결과는 따로 기록한다.
 
 ### Supabase와 Vercel 설정
 

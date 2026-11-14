@@ -1,0 +1,25 @@
+# 의존성·빌드 결과
+node_modules/
+dist/
+dist-electron/
+out/
+*.tsbuildinfo
+
+# 비밀값 (VITE_ 값도 로컬 파일은 커밋하지 않음)
+.env
+.env.*
+!.env.example
+
+# Vercel
+.vercel/
+
+# 에이전트 도구별 로컬 설정 (공통 규칙은 AGENTS.md에)
+.claude/settings.local.json
+.codex/
+
+# OS·에디터
+.DS_Store
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
