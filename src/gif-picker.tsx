@@ -3,7 +3,7 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { DESKTOP_LIVE, recommendKeyword, searchGifs } from './gif-search'
 import type { GifItem } from './gif-search'
 import { BrandImage } from './jjalkkak-splash'
-import { copyGifInBrowser, macGifCopyUrl, nativeGifClipboard } from './copy-gif'
+import { copyGifInBrowser, nativeGifClipboard, prepareMacGifCopy } from './copy-gif'
 
 const desktop = window.gifHost
 const isMac = /Mac/i.test(navigator.platform)
@@ -342,6 +342,9 @@ export function GifPicker() {
         <footer className="panel-footer">
           <span>{live ? <a href="https://klipy.com/" target="_blank" rel="noreferrer">POWERED BY KLIPY</a> : 'SAMPLE MODE'}</span>
           {!desktop && <button type="button" className="klipy-settings" onClick={() => setKeySettingsOpen(true)}>KLIPY 설정</button>}
+          {desktop?.copyWebGif && <button type="button" className="klipy-settings" onClick={async () => {
+            if (await desktop.copyWebGif?.()) dismiss()
+          }}>웹에서 고른 GIF 복사</button>}
           <span>↵ COPY　 ESC CLOSE</span>
         </footer>
         {(status || shortcutFailed) && <div className="status" role="status">{status || '단축키를 등록할 수 없어요. 앱 메뉴에서 짤깍을 열 수 있어요.'}</div>}
@@ -374,15 +377,16 @@ export function GifPicker() {
             <div className="history-content gif-handoff">
               {isMac ? <>
                 <span>움직이는 GIF는 짤깍 맥 앱에서 복사할 수 있어요.</span>
-                <a className="action-button" href={macGifCopyUrl(handoff)}>짤깍 앱에서 GIF 복사</a>
                 <a href={`${import.meta.env.BASE_URL}Jjalkkak-macOS.zip`}>맥 앱 다운로드</a>
-                <button type="button" className="action-button" onClick={async () => {
+                <button type="button" className="action-button" disabled={Boolean(pending)} onClick={async () => {
+                  setPending(handoff.id)
                   try {
-                    await navigator.clipboard.writeText(handoff.gifUrl)
+                    await prepareMacGifCopy(handoff)
                     setHandoff(null)
-                    setStatus('앱이 열리지 않으면 메뉴 막대의 짤깍 → 복사한 GIF 주소로 원본 복사를 누르세요.')
-                  } catch { setStatus('GIF 주소를 복사할 수 없어요.'); setHandoff(null) }
-                }}>앱이 열리지 않으면 GIF 주소 복사</button>
+                    setStatus('메뉴 막대의 짤깍 → 웹에서 고른 GIF 복사를 누른 뒤 ⌘V로 붙여넣으세요.')
+                  } catch { setStatus('GIF 원본을 가져오지 못했어요. 다시 시도해 주세요.'); setHandoff(null) }
+                  finally { setPending('') }
+                }}>{pending ? 'GIF 준비 중…' : '맥 앱으로 GIF 보내기'}</button>
               </> : <>
                 <span>이 브라우저에서는 GIF 파일을 직접 복사할 수 없어요.</span>
                 <a className="action-button" href={handoff.gifUrl} target="_blank" rel="noreferrer">원본 GIF 열기</a>

@@ -6,6 +6,7 @@ export type GifItem = {
 }
 
 export type GifHost = {
+  copyWebGif?: () => Promise<boolean>
   onOpen: (listener: (sessionId: number) => void) => () => void
   onClose: (listener: () => void) => () => void
   ready: () => void

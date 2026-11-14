@@ -37,7 +37,6 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleVersion</key><string>3</string>
 <key>CFBundleShortVersionString</key><string>0.1.1</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
-<key>CFBundleURLTypes</key><array><dict><key>CFBundleTypeRole</key><string>Viewer</string><key>CFBundleURLName</key><string>club.huddling.jjalkkak.copy</string><key>CFBundleURLSchemes</key><array><string>jjalkkak-copy</string></array></dict></array>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
@@ -55,8 +54,7 @@ cat > "$stage/share/사용 안내.txt" <<'GUIDE'
 2. ‘ㅋㅋ 웃김’이나 ‘감사’를 검색하고 GIF를 클릭합니다.
 3. 창이 닫히면 맥 카카오톡에서 ⌘V로 붙여넣습니다. 상대 화면에서 움직이는지도 확인합니다.
 4. ⌥ Space 또는 메뉴 막대의 번개 아이콘에서 다시 엽니다.
-5. 웹 짤깍에서 실시간 GIF를 선택한 뒤 ‘짤깍 앱에서 GIF 복사’를 눌러도 됩니다.
-6. 웹에서 앱이 열리지 않으면 ‘앱이 열리지 않으면 GIF 주소 복사’를 누른 뒤 메뉴 막대의 짤깍에서 ‘복사한 GIF 주소로 원본 복사’를 선택합니다.
+5. 웹 짤깍에서는 GIF를 선택하고 ‘맥 앱으로 GIF 보내기’를 누른 뒤 메뉴 막대의 ‘웹에서 고른 GIF 복사’를 선택합니다.
 
 샘플 검색과 키워드 추천은 오프라인에서 동작합니다.
 개발자 확인 경고가 뜨면 팀에서 받은 파일임을 확인한 뒤 시스템 설정 → 개인정보 보호 및 보안 → 그래도 열기를 선택하세요.
