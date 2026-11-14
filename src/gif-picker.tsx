@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { LIVE, recommendKeyword, searchGifs } from './gif-search'
+import { DESKTOP_LIVE, recommendKeyword, searchGifs } from './gif-search'
 import type { GifItem } from './gif-search'
 import { BrandImage } from './jjalkkak-splash'
 
@@ -22,6 +22,8 @@ function readHistory(): GifItem[] {
 
 export function GifPicker() {
   const [open, setOpen] = useState(!desktop)
+  const [browserKey, setBrowserKey] = useState('')
+  const [keySettingsOpen, setKeySettingsOpen] = useState(false)
   const [session, setSession] = useState(0)
   const [mode, setMode] = useState<'search' | 'recommend'>('search')
   const [query, setQuery] = useState('')
@@ -50,6 +52,7 @@ export function GifPicker() {
   const recent = mode === 'search' && category === '최근 사용' && !query.trim()
   const searchTerm = mode === 'search' ? query.trim() || (category === '추천' || recent ? '' : category) : keyword
   const displayed = recent ? history : items
+  const live = DESKTOP_LIVE || Boolean(browserKey)
 
   function dismiss() {
     active.current = false
@@ -119,16 +122,16 @@ export function GifPicker() {
 
     const timer = window.setTimeout(async () => {
       try {
-        const results = await searchGifs(searchTerm, abort.signal, session)
+        const results = await searchGifs(searchTerm, abort.signal, session, browserKey)
         if (!abort.signal.aborted) setItems(mode === 'recommend' ? results.slice(0, 3) : results)
       } catch (err) {
         if (!abort.signal.aborted) setError(err instanceof Error ? err.message : '검색할 수 없어요.')
       } finally {
         if (!abort.signal.aborted) setLoading(false)
       }
-    }, LIVE && searchTerm ? 280 : 0)
+    }, live && searchTerm ? 280 : 0)
     return () => { abort.abort(); window.clearTimeout(timer) }
-  }, [mode, open, session, keyword, searchTerm, retry, recent])
+  }, [mode, open, session, keyword, searchTerm, retry, recent, live, browserKey])
 
   useEffect(() => {
     grid.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' })
@@ -193,7 +196,13 @@ export function GifPicker() {
 
   function onKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
     if (composing.current || event.nativeEvent.isComposing || event.keyCode === 229) return
-    if (event.key === 'Escape') { event.preventDefault(); if (failed) setFailed(null); else dismiss(); return }
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      if (keySettingsOpen) setKeySettingsOpen(false)
+      else if (failed) setFailed(null)
+      else dismiss()
+      return
+    }
     if (!displayed.length || event.target instanceof HTMLTextAreaElement) return
 
     const arrows = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -2, ArrowDown: 2 }
@@ -299,10 +308,34 @@ export function GifPicker() {
         </div>
 
         <footer className="panel-footer">
-          <span>{LIVE ? <a href="https://klipy.com/" target="_blank" rel="noreferrer">POWERED BY KLIPY</a> : 'SAMPLE MODE'}</span>
+          <span>{live ? <a href="https://klipy.com/" target="_blank" rel="noreferrer">POWERED BY KLIPY</a> : 'SAMPLE MODE'}</span>
+          {!desktop && <button type="button" className="klipy-settings" onClick={() => setKeySettingsOpen(true)}>KLIPY 설정</button>}
           <span>{desktop ? '↵ COPY' : '↵ OPEN'}　 ESC CLOSE</span>
         </footer>
         {(status || shortcutFailed) && <div className="status" role="status">{status || '단축키를 등록할 수 없어요. 앱 메뉴에서 짤깍을 열 수 있어요.'}</div>}
+        {keySettingsOpen && <div className="copy-overlay">
+          <form role="dialog" aria-label="KLIPY 설정" aria-modal="true" className="history-empty" onSubmit={(event) => {
+            event.preventDefault()
+            const form = event.currentTarget
+            const key = new FormData(form).get('klipy-key')?.toString().trim()
+            if (!key) return
+            form.reset()
+            setBrowserKey(key)
+            setCategory('추천')
+            setStatus('')
+            setKeySettingsOpen(false)
+          }}>
+            <div className="history-title"><span>&gt; KLIPY SETTINGS</span><button type="button" className="window-close" aria-label="설정 닫기" onClick={() => setKeySettingsOpen(false)}>x</button></div>
+            <div className="history-content klipy-form">
+              <label htmlFor="klipy-key">KLIPY 웹 클라이언트용 앱 키</label>
+              <input autoFocus id="klipy-key" name="klipy-key" type="password" autoComplete="off" maxLength={256} required />
+              <small>이 탭에서만 사용해요. 새로고침하면 다시 입력해야 해요.</small>
+              <div><button type="submit" className="action-button">실시간 검색 켜기</button>
+                {browserKey && <button type="button" className="action-button" onClick={() => { setBrowserKey(''); setKeySettingsOpen(false) }}>샘플로 전환</button>}
+              </div>
+            </div>
+          </form>
+        </div>}
         {failed && <div className="copy-overlay">
           <div role="alertdialog" aria-label="GIF 복사 실패" className="history-empty">
             <div className="history-title"><span>&gt; ERROR</span><button className="window-close" aria-label="오류 닫기" onClick={() => setFailed(null)}>x</button></div>

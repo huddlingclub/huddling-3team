@@ -14,9 +14,8 @@ npm run dev
 ## Vercel 배포
 
 저장소 루트에서 Vite로 빌드합니다. 빌드 명령은 `npm run build`, 출력 폴더는 `dist`입니다.
-Vercel 프로젝트의 Environment Variables에 웹 클라이언트용 KLIPY 앱 키를 `VITE_KLIPY_KEY`로 추가한 뒤 배포합니다.
-키가 있으면 실시간 검색을 사용합니다. 운영 환경에 `VITE_GIF_MODE=live`도 지정하면 키가 빠졌을 때 화면에 설정 오류가 표시됩니다.
-Vite의 `VITE_` 값은 브라우저 번들에 포함됩니다. KLIPY에서 발급받은 웹 클라이언트용 키를 사용하고, 파트너 설정에서 배포 환경과 권한을 확인하세요.
+배포 화면 하단의 `KLIPY 설정`을 열고 KLIPY 웹 클라이언트용 앱 키를 입력합니다.
+키는 열린 브라우저 탭이 메모리에 보관하며 KLIPY 요청에만 사용합니다. 새로고침하면 샘플 모드로 돌아갑니다.
 
 브라우저에서 보이는 단축키 안내는 데스크톱 앱을 위한 것입니다. 웹에서는 결과를 선택하면 원본 GIF가 새 탭에서 열리거나 샘플 파일을 내려받습니다.
 문자 추천은 기본적으로 기기 내 키워드 규칙을 사용하며, 실시간 모드에서는 해당 검색어로 KLIPY 결과를 조회합니다.
@@ -24,7 +23,7 @@ Vite의 `VITE_` 값은 브라우저 번들에 포함됩니다. KLIPY에서 발�
 ## 실시간 검색과 로컬 AI
 
 - 샘플 모드에서 검색과 추천을 바로 시연할 수 있습니다.
-- KLIPY 실시간 검색은 `.env.example`을 `.env.local`로 복사하고 `VITE_GIF_MODE=live` 및 발급받은 `VITE_KLIPY_KEY`를 설정한 뒤 Vite와 Electron을 다시 시작합니다. Vite 환경 변수는 웹 번들에 포함될 수 있으므로 키는 클라이언트 사용이 허용된 테스트 환경에서 설정합니다.
+- KLIPY 실시간 검색은 `.env.example`을 `.env.local`로 복사하고 `VITE_GIF_MODE=live` 및 발급받은 `VITE_KLIPY_KEY`를 설정한 뒤 로컬 Electron과 Vite를 다시 시작합니다.
 - Electron에서 로컬 Ollama를 실행하고 설치한 모델 이름을 `VITE_OLLAMA_MODEL`에 지정하면 메시지의 감정과 맥락을 분석해 영어 검색어를 만듭니다. KLIPY에는 이 검색어가 전달됩니다. 기본 모드의 대화 추천은 기기 내 키워드 규칙을 사용합니다.
 - `npm run build`로 타입 검사와 웹 빌드를 실행합니다.
 

@@ -126,3 +126,22 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
 .skip-intro{position:absolute;z-index:4;right:12px;bottom:9px;color:#fff;background:#08070c;border:1px solid #37b0f1;padding:3px 7px;font-size:10px}
 @media(max-width:430px){.stage{padding:8px}.panel-content{padding-inline:10px}.hero-info{right:9px}.hero-logo{left:10px;width:130px}.quick-search{gap:4px}.quick-search button{padding-inline:5px}.history-empty{margin-top:30px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important}}
+
+.klipy-settings {
+  padding: 0 3px;
+  border: 0;
+  color: var(--blue);
+  background: transparent;
+  font: inherit;
+}
+.klipy-form { color: #fff; }
+.klipy-form input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--blue);
+  background: var(--surface);
+  color: #fff;
+  padding: 6px;
+}
+.klipy-form small { color: var(--muted); font-size: 10px; }
+.klipy-form > div { display: flex; gap: 8px; }

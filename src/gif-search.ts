@@ -44,8 +44,8 @@ const samples = reactions.map(([id, description, keywords]) => ({
   id, description, keywords, previewUrl: `${import.meta.env.BASE_URL}fixtures/${id}.gif`, gifUrl: `/fixtures/${id}.gif`,
 }))
 
-const apiKey: string | undefined = import.meta.env.VITE_KLIPY_KEY?.trim()
-export const LIVE = import.meta.env.VITE_GIF_MODE === 'live' || (import.meta.env.VITE_GIF_MODE !== 'sample' && Boolean(apiKey))
+export const DESKTOP_LIVE = Boolean(window.gifHost) && (import.meta.env.VITE_GIF_MODE === 'live' ||
+  (import.meta.env.VITE_GIF_MODE !== 'sample' && Boolean(import.meta.env.VITE_KLIPY_KEY?.trim())))
 export const LOCAL_AI = Boolean(window.gifHost && import.meta.env.VITE_OLLAMA_MODEL)
 
 export async function recommendKeyword(message: string, sessionId: number) {
@@ -94,15 +94,14 @@ function customerId() {
   return value
 }
 
-export async function searchGifs(query: string, signal: AbortSignal, sessionId: number) {
-  if (!LIVE) {
+export async function searchGifs(query: string, signal: AbortSignal, sessionId: number, browserKey: string) {
+  if (!DESKTOP_LIVE && !browserKey) {
     const terms = (categoryTerms[query] ?? query).toLocaleLowerCase().split(/\s+/).filter(Boolean)
     return terms.length ? samples.filter((item) => terms.some((term) => item.keywords.includes(term))) : samples
   }
-  if (!apiKey) throw new Error('실시간 검색에 사용할 KLIPY 키가 없어요.')
   const customer = customerId()
   if (window.gifHost) return parseKlipy(await window.gifHost.search(query, customer, sessionId))
-  const url = new URL(`https://api.klipy.com/api/v1/${encodeURIComponent(apiKey)}/gifs/${query ? 'search' : 'trending'}`)
+  const url = new URL(`https://api.klipy.com/api/v1/${encodeURIComponent(browserKey)}/gifs/${query ? 'search' : 'trending'}`)
   url.search = new URLSearchParams({ q: query, locale: 'kr', per_page: '12', customer_id: customer,
     format_filter: 'gif,webp', content_filter: 'medium' }).toString()
   const response = await fetch(url, { signal })
