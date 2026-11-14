@@ -1,8 +1,17 @@
 import AppKit
 import Carbon
+import ImageIO
 import WebKit
 
 private let shortcutSignature: OSType = 0x47464B59
+
+private final class GifDownloadDelegate: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,
+                    completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil)
+    }
+}
 
 private final class PickerWebView: WKWebView, NSDraggingSource {
     private var dragEvent: NSEvent?
@@ -39,6 +48,9 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
     private var ready = false
     private var isOpen = false
     private var sessionID = 0
+    private var externalCopy: Task<Void, Never>?
+    private var transferFolder: URL?
+    private lazy var downloads = URLSession(configuration: .ephemeral, delegate: GifDownloadDelegate(), delegateQueue: nil)
 
     private let bridge = """
     (() => {
@@ -72,7 +84,7 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 512),
                           styleMask: [.titled, .closable, .fullSizeContentView],
                           backing: .buffered, defer: false)
-        window.title = "짤키"
+        window.title = "짤깍"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.standardWindowButton(.closeButton)?.isHidden = true
@@ -83,13 +95,13 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
         window.contentView = webView
 
         let menu = NSMenu()
-        let openItem = menu.addItem(withTitle: "짤키 열기", action: #selector(showPicker), keyEquivalent: "")
+        let openItem = menu.addItem(withTitle: "짤깍 열기", action: #selector(showPicker), keyEquivalent: "")
         openItem.target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "짤키 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "짤깍 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menuItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        menuItem?.button?.image = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: "짤키")
-        menuItem?.button?.toolTip = "짤키"
+        menuItem?.button?.image = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: "짤깍")
+        menuItem?.button?.toolTip = "짤깍"
         menuItem?.menu = menu
 
         // Standard edit shortcuts work inside the WebKit search and message fields.
@@ -132,7 +144,7 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
     }
 
     @objc private func showPicker() {
-        guard ready, !isOpen else { return }
+        guard ready, !isOpen, externalCopy == nil else { return }
         let active = NSWorkspace.shared.frontmostApplication
         previousApp = active?.processIdentifier == ProcessInfo.processInfo.processIdentifier ? nil : active
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
@@ -156,6 +168,71 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
         window.orderOut(nil)
         previousApp?.activate(options: [])
         previousApp = nil
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard let url = urls.first,
+              let target = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              target.scheme == "jjalkkak-copy", target.host == "gif",
+              let source = target.queryItems?.first(where: { $0.name == "source" })?.value else { return }
+        externalCopy?.cancel()
+        hidePicker()
+        externalCopy = Task { @MainActor in
+            defer { if !Task.isCancelled { externalCopy = nil } }
+            do {
+                let file = try await originalGif(source)
+                try Task.checkCancellation()
+                guard copyFile(file) else { throw CocoaError(.fileWriteUnknown) }
+            } catch {
+                guard !Task.isCancelled else { return }
+                let alert = NSAlert()
+                alert.messageText = "GIF를 복사하지 못했어요."
+                alert.informativeText = "원본 GIF에 연결할 수 있는지 확인한 뒤 다시 시도해 주세요."
+                NSApp.activate(ignoringOtherApps: true)
+                alert.runModal()
+            }
+        }
+    }
+
+    private func sampleFile(_ source: String) -> URL? {
+        guard source.range(of: #"^/fixtures/[a-z]+\.gif$"#, options: .regularExpression) != nil else { return nil }
+        return Bundle.main.resourceURL?.appendingPathComponent("picker" + source)
+    }
+
+    private func originalGif(_ source: String) async throws -> URL {
+        if let sample = sampleFile(source), FileManager.default.isReadableFile(atPath: sample.path) {
+            return sample
+        }
+        guard source.count <= 8192, let url = URL(string: source), url.scheme == "https",
+              let host = url.host, host.range(of: #"^static[0-9]*\.klipy\.com$"#, options: .regularExpression) != nil,
+              url.user == nil, url.password == nil, url.port == nil else { throw URLError(.unsupportedURL) }
+        let maximumBytes = 24 * 1024 * 1024
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
+        request.setValue("image/gif", forHTTPHeaderField: "Accept")
+        let (stream, response) = try await downloads.bytes(for: request)
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
+              response.expectedContentLength <= Int64(maximumBytes) else { throw URLError(.badServerResponse) }
+
+        var data = Data()
+        for try await byte in stream {
+            guard data.count < maximumBytes else { throw URLError(.dataLengthExceedsMaximum) }
+            data.append(byte)
+        }
+        guard ["GIF87a", "GIF89a"].contains(String(decoding: data.prefix(6), as: UTF8.self)),
+              let image = CGImageSourceCreateWithData(data as CFData, nil), CGImageSourceGetCount(image) > 0
+        else { throw CocoaError(.fileReadCorruptFile) }
+        let folder = transferFolder ?? FileManager.default.temporaryDirectory.appendingPathComponent("jjalkkak-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        transferFolder = folder
+        let file = folder.appendingPathComponent(UUID().uuidString).appendingPathExtension("gif")
+        try data.write(to: file, options: .atomic)
+        return file
+    }
+
+    private func copyFile(_ file: URL) -> Bool {
+        let board = NSPasteboard.general
+        board.declareTypes([.fileURL], owner: nil)
+        return board.setString(file.absoluteString, forType: .fileURL)
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage,
@@ -189,9 +266,7 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
         case "drag":
             replyHandler(webView.dragFile(file), nil)
         case "copy":
-            let board = NSPasteboard.general
-            board.declareTypes([.fileURL], owner: nil)
-            let copied = board.setString(file.absoluteString, forType: .fileURL)
+            let copied = copyFile(file)
             replyHandler(copied, nil)
             if copied { hidePicker() }
         default:

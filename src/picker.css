@@ -145,3 +145,6 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
 }
 .klipy-form small { color: var(--muted); font-size: 10px; }
 .klipy-form > div { display: flex; gap: 8px; }
+
+.gif-handoff a { color: var(--cyan); }
+.gif-handoff .action-button { color: var(--black); text-decoration: none; }
