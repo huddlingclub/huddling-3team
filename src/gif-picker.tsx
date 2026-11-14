@@ -376,6 +376,13 @@ export function GifPicker() {
                 <span>움직이는 GIF는 짤깍 맥 앱에서 복사할 수 있어요.</span>
                 <a className="action-button" href={macGifCopyUrl(handoff)}>짤깍 앱에서 GIF 복사</a>
                 <a href={`${import.meta.env.BASE_URL}Jjalkkak-macOS.zip`}>맥 앱 다운로드</a>
+                <button type="button" className="action-button" onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(handoff.gifUrl)
+                    setHandoff(null)
+                    setStatus('앱이 열리지 않으면 메뉴 막대의 짤깍 → 복사한 GIF 주소로 원본 복사를 누르세요.')
+                  } catch { setStatus('GIF 주소를 복사할 수 없어요.'); setHandoff(null) }
+                }}>앱이 열리지 않으면 GIF 주소 복사</button>
               </> : <>
                 <span>이 브라우저에서는 GIF 파일을 직접 복사할 수 없어요.</span>
                 <a className="action-button" href={handoff.gifUrl} target="_blank" rel="noreferrer">원본 GIF 열기</a>

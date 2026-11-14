@@ -97,6 +97,8 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
         let menu = NSMenu()
         let openItem = menu.addItem(withTitle: "짤깍 열기", action: #selector(showPicker), keyEquivalent: "")
         openItem.target = self
+        let copyLink = menu.addItem(withTitle: "복사한 GIF 주소로 원본 복사", action: #selector(copyGifFromClipboardLink), keyEquivalent: "")
+        copyLink.target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "짤깍 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menuItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -175,6 +177,15 @@ private final class GifkeyApp: NSObject, NSApplicationDelegate, WKScriptMessageH
               let target = URLComponents(url: url, resolvingAgainstBaseURL: false),
               target.scheme == "jjalkkak-copy", target.host == "gif",
               let source = target.queryItems?.first(where: { $0.name == "source" })?.value else { return }
+        copyOriginal(source)
+    }
+
+    @objc private func copyGifFromClipboardLink() {
+        guard let source = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+        copyOriginal(source)
+    }
+
+    private func copyOriginal(_ source: String) {
         externalCopy?.cancel()
         hidePicker()
         externalCopy = Task { @MainActor in
