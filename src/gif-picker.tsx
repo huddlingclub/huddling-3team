@@ -3,6 +3,7 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { DESKTOP_LIVE, recommendKeyword, searchGifs } from './gif-search'
 import type { GifItem } from './gif-search'
 import { BrandImage } from './jjalkkak-splash'
+import { copyGifInBrowser } from './copy-gif'
 
 const desktop = window.gifHost
 const isMac = /Mac/i.test(navigator.platform)
@@ -148,14 +149,21 @@ export function GifPicker() {
     setStatus('')
     setFailed(null)
     if (!desktop) {
-      const link = document.createElement('a')
-      link.href = item.gifUrl
-      link.download = `${item.id}.gif`
-      const external = item.gifUrl.startsWith('https://')
-      if (external) { link.target = '_blank'; link.rel = 'noopener noreferrer' }
-      link.click()
-      remember(item)
-      setStatus(external ? '원본 GIF를 새 탭에서 열었어요.' : 'GIF 파일 다운로드를 시작했어요.')
+      copying.current = true
+      setPending(item.id)
+      const startedIn = currentSession.current
+      try {
+        const format = await copyGifInBrowser(item)
+        if (!active.current || startedIn !== currentSession.current) return
+        remember(item)
+        const paste = isMac ? '⌘V' : 'Ctrl+V'
+        setStatus(format === 'gif' ? `GIF를 복사했어요. ${paste}로 붙여넣으세요.` : `정지 이미지로 복사했어요. ${paste}로 붙여넣으세요.`)
+      } catch {
+        if (active.current && startedIn === currentSession.current) setFailed(item)
+      } finally {
+        copying.current = false
+        setPending('')
+      }
       return
     }
 
@@ -287,7 +295,7 @@ export function GifPicker() {
                   return <button key={item.id} className="gif-card" type="button" data-active={position === index}
                     style={{ gridColumn: column + 1, gridRow: `${start} / span ${height}` }}
                     onFocus={() => setIndex(position)} onClick={() => void useGif(item)}
-                    aria-label={`${item.description} ${desktop ? '복사' : '열기 또는 다운로드'}`}
+                    aria-label={`${item.description} 복사`}
                     draggable={Boolean(desktop)}
                     onDragStart={(event) => {
                       event.preventDefault()
@@ -296,7 +304,7 @@ export function GifPicker() {
                         .catch(() => setStatus('GIF 파일을 끌어놓을 수 없어요.'))
                     }}>
                     <img src={item.previewUrl} alt="" draggable={false} />
-                    <span className="card-action">{pending === item.id ? 'GIF 복사 중…' : desktop ? 'GIF 복사 ↵' : 'GIF 열기 ↵'}</span>
+                    <span className="card-action">{pending === item.id ? '복사 중…' : '복사 ↵'}</span>
                   </button>
                 })}
               </div> : mode === 'recommend' && !keyword ? <ol className="how-it-works">
@@ -310,7 +318,7 @@ export function GifPicker() {
         <footer className="panel-footer">
           <span>{live ? <a href="https://klipy.com/" target="_blank" rel="noreferrer">POWERED BY KLIPY</a> : 'SAMPLE MODE'}</span>
           {!desktop && <button type="button" className="klipy-settings" onClick={() => setKeySettingsOpen(true)}>KLIPY 설정</button>}
-          <span>{desktop ? '↵ COPY' : '↵ OPEN'}　 ESC CLOSE</span>
+          <span>↵ COPY　 ESC CLOSE</span>
         </footer>
         {(status || shortcutFailed) && <div className="status" role="status">{status || '단축키를 등록할 수 없어요. 앱 메뉴에서 짤깍을 열 수 있어요.'}</div>}
         {keySettingsOpen && <div className="copy-overlay">
