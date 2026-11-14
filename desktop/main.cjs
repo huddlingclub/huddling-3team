@@ -18,8 +18,8 @@ if (!packaged) {
   }
 }
 
-const key = process.env.VITE_KLIPY_KEY?.trim()
-const live = !packaged && (process.env.VITE_GIF_MODE === 'live' || (process.env.VITE_GIF_MODE !== 'sample' && Boolean(key)))
+const key = process.env.KLIPY_API_KEY?.trim()
+const live = !packaged && process.env.VITE_GIF_MODE === 'live'
 const model = process.env.VITE_OLLAMA_MODEL
 const shortcut = 'Alt+Space'
 const mac = process.platform === 'darwin'

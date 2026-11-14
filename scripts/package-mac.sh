@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-export VITE_GIF_MODE=sample VITE_KLIPY_KEY= VITE_OLLAMA_MODEL=
+export VITE_GIF_MODE=sample KLIPY_API_KEY= VITE_OLLAMA_MODEL=
 stage=$(mktemp -d /tmp/gifkey-lite.XXXXXX)
 trap 'rm -rf -- "$stage"' EXIT
 app="$stage/share/Gifkey.app"
@@ -34,8 +34,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>Gifkey</string>
 <key>CFBundleDisplayName</key><string>짤깍</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>4</string>
-<key>CFBundleShortVersionString</key><string>0.2.0</string>
+<key>CFBundleVersion</key><string>5</string>
+<key>CFBundleShortVersionString</key><string>0.2.1</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>

@@ -45,8 +45,7 @@ const samples = reactions.map(([id, description, keywords]) => ({
   id, description, keywords, previewUrl: `${import.meta.env.BASE_URL}fixtures/${id}.gif`, gifUrl: `/fixtures/${id}.gif`,
 }))
 
-export const DESKTOP_LIVE = Boolean(window.gifHost) && (import.meta.env.VITE_GIF_MODE === 'live' ||
-  (import.meta.env.VITE_GIF_MODE !== 'sample' && Boolean(import.meta.env.VITE_KLIPY_KEY?.trim())))
+export const DESKTOP_LIVE = Boolean(window.gifHost) && import.meta.env.VITE_GIF_MODE === 'live'
 export const LOCAL_AI = Boolean(window.gifHost && import.meta.env.VITE_OLLAMA_MODEL)
 
 export async function recommendKeyword(message: string, sessionId: number) {
@@ -88,26 +87,28 @@ function parseKlipy(raw: unknown): GifItem[] {
 }
 
 function customerId() {
-  const existing = localStorage.getItem('gifkey-customer-id')
-  if (existing) return existing
-  const value = crypto.randomUUID()
-  localStorage.setItem('gifkey-customer-id', value)
-  return value
+  try {
+    const existing = localStorage.getItem('gifkey-customer-id')
+    if (existing && /^[a-f\d-]{36}$/i.test(existing)) return existing
+    const value = crypto.randomUUID()
+    localStorage.setItem('gifkey-customer-id', value)
+    return value
+  } catch { return crypto.randomUUID() }
 }
 
-export async function searchGifs(query: string, signal: AbortSignal, sessionId: number, browserKey: string) {
-  if (!DESKTOP_LIVE && !browserKey) {
+export async function searchGifs(query: string, signal: AbortSignal, sessionId: number) {
+  if (window.gifHost && !DESKTOP_LIVE) {
     const terms = (categoryTerms[query] ?? query).toLocaleLowerCase().split(/\s+/).filter(Boolean)
     return terms.length ? samples.filter((item) => terms.some((term) => item.keywords.includes(term))) : samples
   }
   const customer = customerId()
   if (window.gifHost) return parseKlipy(await window.gifHost.search(query, customer, sessionId))
-  const url = new URL(`https://api.klipy.com/api/v1/${encodeURIComponent(browserKey)}/gifs/${query ? 'search' : 'trending'}`)
-  url.search = new URLSearchParams({ q: query, locale: 'kr', per_page: '12', customer_id: customer,
-    format_filter: 'gif,webp', content_filter: 'medium' }).toString()
-  const response = await fetch(url, { signal })
-  if (response.status === 401 || response.status === 403) throw new Error('KLIPY 키 또는 배포 도메인 설정을 확인해 주세요.')
+  const params = new URLSearchParams({ q: query, customer_id: customer })
+  const response = await fetch(`/api/gifs?${params}`, { signal })
   if (response.status === 429) throw new Error('검색 한도에 도달했어요. 잠시 뒤 다시 시도해 주세요.')
-  if (!response.ok) throw new Error('KLIPY 검색에 실패했어요. 연결과 키를 확인해 주세요.')
-  return parseKlipy(await response.json())
+  if (response.status === 503) throw new Error('GIF 검색 연결을 준비 중이에요. 잠시 뒤 다시 시도해 주세요.')
+  if (!response.ok) throw new Error('GIF 검색에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.')
+  const result = await response.json() as { items?: GifItem[] }
+  if (!Array.isArray(result.items)) throw new Error('GIF 검색 결과를 읽지 못했어요.')
+  return result.items
 }
